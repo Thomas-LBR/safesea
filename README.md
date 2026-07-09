@@ -67,3 +67,7 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 3. Remplacer la carte MVP par Leaflet.
 4. Integrer Open-Meteo Marine API.
 5. Activer les notifications et la PWA complete.
+
+## Supabase
+
+Le schema initial est disponible dans `supabase/schema.sql`. Il contient les tables principales, les types enum et les premieres politiques RLS.

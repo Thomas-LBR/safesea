@@ -10,6 +10,8 @@ import {
   Wind
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { MapPanel } from "@/components/map-panel";
+import { ReportForm } from "@/components/report-form";
 
 const reports = [
   {
@@ -89,24 +91,13 @@ export default function Home() {
                 <MapPin size={20} aria-hidden="true" />
               </button>
             </div>
-            <div className="sea-grid relative min-h-[360px] bg-cyan-50">
-              <div className="absolute left-[18%] top-[32%] rounded-md bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-soft">
-                Danger
-              </div>
-              <div className="absolute left-[58%] top-[24%] rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-soft">
-                Pollution
-              </div>
-              <div className="absolute left-[44%] top-[62%] rounded-md bg-lagoon px-3 py-2 text-xs font-bold text-white shadow-soft">
-                Balisage
-              </div>
-              <div className="absolute bottom-4 left-4 rounded-md bg-white/90 px-3 py-2 text-sm font-semibold text-harbor shadow-soft">
-                Carte MVP - integration Leaflet prevue
-              </div>
-            </div>
+            <MapPanel />
           </section>
         </div>
 
         <aside className="grid gap-6">
+          <ReportForm />
+
           <section className="rounded-md border border-cyan-900/10 bg-white p-5 shadow-soft">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-harbor">Alertes actives</h2>
