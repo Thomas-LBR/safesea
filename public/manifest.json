@@ -1,0 +1,11 @@
+{
+  "name": "SafeSea",
+  "short_name": "SafeSea",
+  "description": "La securite en mer grace a la communaute.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4fbfb",
+  "theme_color": "#0b2533",
+  "icons": []
+}
+
