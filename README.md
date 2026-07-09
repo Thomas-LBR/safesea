@@ -43,10 +43,10 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 ## Fonctionnalites MVP
 
 - tableau de bord mer ;
-- indice de securite ;
-- carte communautaire ;
-- signalements ;
-- checklist avant depart ;
+- indice de securite calcule ;
+- carte communautaire Leaflet ;
+- signalements de demonstration et ajout local interactif ;
+- checklist avant depart persistante dans le navigateur ;
 - profil et statistiques ;
 - base PWA.
 
@@ -63,9 +63,9 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 ## Roadmap courte
 
 1. Brancher Supabase Auth.
-2. Creer les tables `profiles`, `reports`, `comments`, `votes` et `favorites`.
-3. Remplacer la carte MVP par Leaflet.
-4. Integrer Open-Meteo Marine API.
+2. Sauvegarder les signalements dans PostgreSQL.
+3. Ajouter commentaires, votes et resolution.
+4. Ajouter les photos de signalement.
 5. Activer les notifications et la PWA complete.
 
 ## Supabase

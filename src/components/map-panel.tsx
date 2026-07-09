@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { Report } from "@/types/report";
 
 const CommunityMap = dynamic(() => import("@/components/community-map").then((mod) => mod.CommunityMap), {
   ssr: false,
@@ -11,7 +12,6 @@ const CommunityMap = dynamic(() => import("@/components/community-map").then((mo
   )
 });
 
-export function MapPanel() {
-  return <CommunityMap />;
+export function MapPanel({ reports }: { reports: Report[] }) {
+  return <CommunityMap reports={reports} />;
 }
-
