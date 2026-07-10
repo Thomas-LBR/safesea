@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SafeSea">
+  <rect width="512" height="512" rx="72" fill="#0b2533"/>
+  <path d="M96 312c44 0 44 24 88 24s44-24 88-24 44 24 88 24 44-24 88-24" fill="none" stroke="#67e8f9" stroke-width="28" stroke-linecap="round"/>
+  <path d="M128 376c32 0 32 18 64 18s32-18 64-18 32 18 64 18 32-18 64-18" fill="none" stroke="#f4fbfb" stroke-width="22" stroke-linecap="round"/>
+  <path d="M256 92l116 54v82c0 86-48 137-116 174-68-37-116-88-116-174v-82l116-54z" fill="#0f7688" stroke="#f4fbfb" stroke-width="20" stroke-linejoin="round"/>
+  <path d="M256 152v138" stroke="#f4fbfb" stroke-width="24" stroke-linecap="round"/>
+  <path d="M198 220h116" stroke="#f4fbfb" stroke-width="24" stroke-linecap="round"/>
+</svg>
+

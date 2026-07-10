@@ -3,9 +3,17 @@
   "short_name": "SafeSea",
   "description": "La securite en mer grace a la communaute.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f4fbfb",
   "theme_color": "#0b2533",
-  "icons": []
+  "categories": ["navigation", "weather", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
-

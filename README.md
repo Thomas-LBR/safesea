@@ -48,7 +48,7 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 - signalements de demonstration et ajout local interactif ;
 - checklist avant depart persistante dans le navigateur ;
 - profil et statistiques ;
-- base PWA.
+- base PWA avec manifest, icone et service worker.
 
 ## Preuves FOU possibles
 
