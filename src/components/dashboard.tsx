@@ -1,14 +1,15 @@
 "use client";
 
 import { Anchor, Bell, CheckCircle2, Compass, MapPin, ShieldAlert, Waves, Wind } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { ChecklistPanel } from "@/components/checklist-panel";
 import { MapPanel } from "@/components/map-panel";
 import { ReportForm } from "@/components/report-form";
-import { demoReports } from "@/data/demo-reports";
 import { computeSafetyScore, getSafetyLabel } from "@/lib/safety-score";
 import type { MarineWeather } from "@/lib/weather";
+import { getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
 import type { Report } from "@/types/report";
 
 const reportStyles = {
@@ -20,17 +21,8 @@ const reportStyles = {
   other: "bg-slate-50 text-slate-700 border-slate-200"
 };
 
-const reportLabels = {
-  danger: "Danger",
-  pollution: "Pollution",
-  obstacle: "Obstacle",
-  wildlife: "Faune",
-  beacon: "Balisage",
-  other: "Autre"
-};
-
 export function Dashboard({ weather }: { weather: MarineWeather }) {
-  const [reports, setReports] = useState<Report[]>(demoReports);
+  const [reports, setReports] = useState<Report[]>(listDemoReports());
   const activeReports = useMemo(() => reports.filter((report) => report.status !== "resolved"), [reports]);
   const safetyScore = computeSafetyScore({
     windKnots: weather.windSpeed,
@@ -131,11 +123,14 @@ function AlertsPanel({ reports }: { reports: Report[] }) {
           <article key={report.id} className={`rounded-md border p-4 ${reportStyles[report.type]}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase">{reportLabels[report.type]}</p>
+                <p className="text-xs font-bold uppercase">{getTypeLabel(report.type)}</p>
                 <h3 className="mt-1 font-bold">{report.title}</h3>
                 <p className="mt-1 text-sm opacity-80">{report.description}</p>
+                <Link href={`/reports/${report.id}`} className="mt-3 inline-flex text-sm font-bold underline underline-offset-4">
+                  Voir le detail
+                </Link>
               </div>
-              <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold">{report.status}</span>
+              <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold">{getStatusLabel(report.status)}</span>
             </div>
           </article>
         ))}

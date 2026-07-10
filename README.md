@@ -71,3 +71,9 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 ## Supabase
 
 Le schema initial est disponible dans `supabase/schema.sql`. Il contient les tables principales, les types enum et les premieres politiques RLS.
+
+## Documentation projet
+
+- `docs/BACKLOG.md` : priorites MVP.
+- `docs/DEPLOYMENT.md` : publication GitHub, Vercel et Supabase.
+- `docs/FOU_PREUVES.md` : preuves a fournir pour la validation FOU.
