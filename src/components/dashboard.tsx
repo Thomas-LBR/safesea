@@ -1,14 +1,14 @@
 "use client";
 
-import { Anchor, Bell, CheckCircle2, Compass, MapPin, ShieldAlert, Waves, Wind } from "lucide-react";
+import { Anchor, Bell, CheckCircle2, Compass, LocateFixed, MapPin, Navigation, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { ChecklistPanel } from "@/components/checklist-panel";
 import { MapPanel } from "@/components/map-panel";
 import { ReportForm } from "@/components/report-form";
 import { computeSafetyScore, getSafetyLabel } from "@/lib/safety-score";
-import type { MarineWeather } from "@/lib/weather";
+import { locationPresets, type MarineLocation, type MarineWeather } from "@/lib/weather";
 import { getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
 import type { Report } from "@/types/report";
 
@@ -23,13 +23,81 @@ const reportStyles = {
 
 export function Dashboard({ weather }: { weather: MarineWeather }) {
   const [reports, setReports] = useState<Report[]>(listDemoReports());
+  const [selectedWeather, setSelectedWeather] = useState(weather);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
   const activeReports = useMemo(() => reports.filter((report) => report.status !== "resolved"), [reports]);
   const safetyScore = computeSafetyScore({
-    windKnots: weather.windSpeed,
-    waveMeters: weather.waveHeight,
-    visibilityKm: weather.visibility,
+    windKnots: selectedWeather.windSpeed,
+    waveMeters: selectedWeather.waveHeight,
+    visibilityKm: selectedWeather.visibility,
+    currentKnots: selectedWeather.currentVelocity,
     nearbyActiveReports: activeReports.length
   });
+
+  async function updateLocation(location: MarineLocation) {
+    setIsLoadingWeather(true);
+    setWeatherError(null);
+
+    const params = new URLSearchParams({
+      latitude: String(location.latitude),
+      longitude: String(location.longitude),
+      label: location.label
+    });
+
+    try {
+      const response = await fetch(`/api/marine?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error("Impossible de recuperer les conditions");
+      }
+
+      setSelectedWeather((await response.json()) as MarineWeather);
+    } catch {
+      setWeatherError("Conditions indisponibles pour cette zone. Reessaie avec un point plus au large.");
+    } finally {
+      setIsLoadingWeather(false);
+    }
+  }
+
+  function handleCustomLocation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const label = String(form.get("label") || "Zone personnalisee");
+    const latitude = Number(form.get("latitude"));
+    const longitude = Number(form.get("longitude"));
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setWeatherError("Latitude et longitude doivent etre valides.");
+      return;
+    }
+
+    void updateLocation({ label, latitude, longitude });
+  }
+
+  function handleGeolocation() {
+    if (!navigator.geolocation) {
+      setWeatherError("Geolocalisation indisponible sur ce navigateur.");
+      return;
+    }
+
+    setIsLoadingWeather(true);
+    setWeatherError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        void updateLocation({
+          label: "Ma position",
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      () => {
+        setIsLoadingWeather(false);
+        setWeatherError("Impossible de recuperer ta position.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   return (
     <main className="min-h-screen bg-foam">
@@ -57,9 +125,11 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
             <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-harbor">Tableau de bord maritime</h1>
-                <p className="mt-1 text-sm text-slate-600">Zone suivie : La Rochelle - Pertuis d&apos;Antioche</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Zone suivie : {selectedWeather.label} ({selectedWeather.latitude.toFixed(3)}, {selectedWeather.longitude.toFixed(3)})
+                </p>
                 <p className="mt-1 text-xs font-semibold uppercase text-slate-500">
-                  Source meteo : {weather.source === "open-meteo" ? "Open-Meteo Marine" : "donnees demo"}
+                  Source : {selectedWeather.source === "open-meteo" ? "Open-Meteo Forecast + Marine" : "donnees demo"}
                 </p>
               </div>
               <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-right">
@@ -69,10 +139,21 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Metric icon={<Wind size={20} />} label="Vent" value={`${weather.windSpeed} nd`} detail="Releve actuel" />
-              <Metric icon={<Waves size={20} />} label="Houle" value={`${weather.waveHeight} m`} detail="Hauteur significative" />
-              <Metric icon={<Compass size={20} />} label="Visibilite" value="Bonne" detail={`${weather.visibility} km`} />
+            <LocationSelector
+              isLoading={isLoadingWeather}
+              error={weatherError}
+              onPreset={updateLocation}
+              onGeolocation={handleGeolocation}
+              onCustomLocation={handleCustomLocation}
+            />
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Metric icon={<Wind size={20} />} label="Vent" value={`${selectedWeather.windSpeed} nd`} detail={`Direction ${selectedWeather.windDirection} deg`} />
+              <Metric icon={<Waves size={20} />} label="Houle" value={`${selectedWeather.waveHeight} m`} detail={`${selectedWeather.wavePeriod} s - ${selectedWeather.waveDirection} deg`} />
+              <Metric icon={<Compass size={20} />} label="Visibilite" value={`${selectedWeather.visibility} km`} detail={getVisibilityLabel(selectedWeather.visibility)} />
+              <Metric icon={<Navigation size={20} />} label="Courant" value={`${selectedWeather.currentVelocity} nd`} detail={`Vers ${selectedWeather.currentDirection} deg`} />
+              <Metric icon={<Thermometer size={20} />} label="Temperature mer" value={`${selectedWeather.seaSurfaceTemperature} degC`} detail="Surface" />
+              <Metric icon={<MapPin size={20} />} label="Coordonnees" value={selectedWeather.latitude.toFixed(2)} detail={selectedWeather.longitude.toFixed(2)} />
             </div>
           </section>
 
@@ -111,6 +192,61 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
   );
 }
 
+function LocationSelector({
+  isLoading,
+  error,
+  onPreset,
+  onGeolocation,
+  onCustomLocation
+}: {
+  isLoading: boolean;
+  error: string | null;
+  onPreset: (location: MarineLocation) => void;
+  onGeolocation: () => void;
+  onCustomLocation: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div className="rounded-md border border-cyan-900/10 bg-foam p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-bold text-harbor">Changer la zone de suivi</p>
+        <button
+          type="button"
+          onClick={onGeolocation}
+          disabled={isLoading}
+          className="inline-flex items-center gap-2 rounded-md border border-cyan-900/15 bg-white px-3 py-2 text-sm font-semibold text-harbor hover:bg-cyan-50 disabled:opacity-60"
+        >
+          <LocateFixed size={16} aria-hidden="true" />
+          Ma position
+        </button>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {locationPresets.map((location) => (
+          <button
+            key={location.label}
+            type="button"
+            onClick={() => onPreset(location)}
+            disabled={isLoading}
+            className="rounded-md border border-cyan-900/15 bg-white px-3 py-2 text-sm font-semibold text-harbor hover:bg-cyan-50 disabled:opacity-60"
+          >
+            {location.label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={onCustomLocation} className="grid gap-2 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
+        <input name="label" className="rounded-md border border-cyan-900/15 px-3 py-2 text-sm" placeholder="Nom de la zone" />
+        <input name="latitude" className="rounded-md border border-cyan-900/15 px-3 py-2 text-sm" placeholder="Latitude" inputMode="decimal" />
+        <input name="longitude" className="rounded-md border border-cyan-900/15 px-3 py-2 text-sm" placeholder="Longitude" inputMode="decimal" />
+        <button type="submit" disabled={isLoading} className="rounded-md bg-harbor px-4 py-2 text-sm font-semibold text-white hover:bg-lagoon disabled:opacity-60">
+          {isLoading ? "Chargement" : "Analyser"}
+        </button>
+      </form>
+      {error ? <p className="mt-3 text-sm font-semibold text-red-700">{error}</p> : null}
+    </div>
+  );
+}
+
 function AlertsPanel({ reports }: { reports: Report[] }) {
   return (
     <section className="rounded-md border border-cyan-900/10 bg-white p-5 shadow-soft">
@@ -137,6 +273,13 @@ function AlertsPanel({ reports }: { reports: Report[] }) {
       </div>
     </section>
   );
+}
+
+function getVisibilityLabel(visibility: number) {
+  if (visibility >= 10) return "Bonne";
+  if (visibility >= 5) return "Correcte";
+  if (visibility >= 2) return "Reduite";
+  return "Faible";
 }
 
 function Metric({

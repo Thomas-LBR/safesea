@@ -2,6 +2,7 @@ export type MarineConditions = {
   windKnots: number;
   waveMeters: number;
   visibilityKm: number;
+  currentKnots: number;
   nearbyActiveReports: number;
 };
 
@@ -19,6 +20,9 @@ export function computeSafetyScore(conditions: MarineConditions) {
   if (conditions.visibilityKm < 2) score -= 25;
   else if (conditions.visibilityKm < 5) score -= 12;
 
+  if (conditions.currentKnots > 3) score -= 18;
+  else if (conditions.currentKnots > 1.5) score -= 10;
+
   score -= Math.min(conditions.nearbyActiveReports * 5, 25);
 
   return Math.max(0, Math.min(100, score));
@@ -30,4 +34,3 @@ export function getSafetyLabel(score: number) {
   if (score >= 40) return "Prudence renforcee";
   return "Sortie deconseillee";
 }
-

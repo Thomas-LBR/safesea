@@ -5,6 +5,7 @@
 - Brancher Supabase Auth.
 - Sauvegarder les signalements en base.
 - Lire les signalements depuis Supabase.
+- Ameliorer la recherche de zone par nom de port.
 - Ajouter les commentaires sur un signalement.
 - Ajouter les confirmations communautaires.
 - Ajouter la resolution d'un signalement.
@@ -36,4 +37,3 @@
 - Demonstration d'un signalement.
 - Demonstration de la checklist.
 - Bilan de competences.
-

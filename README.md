@@ -43,12 +43,23 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 ## Fonctionnalites MVP
 
 - tableau de bord mer ;
+- zone de suivi modifiable par port, coordonnees ou geolocalisation ;
 - indice de securite calcule ;
 - carte communautaire Leaflet ;
 - signalements de demonstration et ajout local interactif ;
 - checklist avant depart persistante dans le navigateur ;
 - profil et statistiques ;
 - base PWA avec manifest, icone et service worker.
+
+## Donnees marines affichees
+
+SafeSea combine Open-Meteo Forecast et Open-Meteo Marine pour afficher :
+
+- vent et direction du vent ;
+- hauteur, direction et periode de houle ;
+- visibilite ;
+- courant marin et direction du courant ;
+- temperature de surface de la mer.
 
 ## Preuves FOU possibles
 
