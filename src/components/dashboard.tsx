@@ -1,6 +1,6 @@
 "use client";
 
-import { Anchor, Bell, CheckCircle2, Compass, LocateFixed, MapPin, Navigation, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
+import { Anchor, Bell, CheckCircle2, Compass, LocateFixed, MapPin, Navigation, Search, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
 import Link from "next/link";
 import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -26,6 +26,8 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
   const [selectedWeather, setSelectedWeather] = useState(weather);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<MarineLocation[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const activeReports = useMemo(() => reports.filter((report) => report.status !== "resolved"), [reports]);
   const safetyScore = computeSafetyScore({
     windKnots: selectedWeather.windSpeed,
@@ -99,6 +101,33 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     );
   }
 
+  async function handleLocationSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const query = String(form.get("query") || "").trim();
+
+    if (!query) {
+      return;
+    }
+
+    setIsSearching(true);
+    setWeatherError(null);
+
+    try {
+      const response = await fetch(`/api/geocode?name=${encodeURIComponent(query)}`);
+      const data = (await response.json()) as { results: MarineLocation[] };
+      setSearchResults(data.results);
+
+      if (data.results.length === 0) {
+        setWeatherError("Aucun lieu trouve. Essaie avec un port proche ou des coordonnees.");
+      }
+    } catch {
+      setWeatherError("Recherche de lieu indisponible pour le moment.");
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-foam">
       <header className="border-b border-cyan-900/10 bg-white/90">
@@ -145,16 +174,24 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
               onPreset={updateLocation}
               onGeolocation={handleGeolocation}
               onCustomLocation={handleCustomLocation}
+              onLocationSearch={handleLocationSearch}
+              searchResults={searchResults}
+              isSearching={isSearching}
             />
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric icon={<Wind size={20} />} label="Vent" value={`${selectedWeather.windSpeed} nd`} detail={`Direction ${selectedWeather.windDirection} deg`} />
-              <Metric icon={<Waves size={20} />} label="Houle" value={`${selectedWeather.waveHeight} m`} detail={`${selectedWeather.wavePeriod} s - ${selectedWeather.waveDirection} deg`} />
+              <Metric icon={<Wind size={20} />} label="Vent" value={`${selectedWeather.windSpeed} nd`} detail={`${formatDirection(selectedWeather.windDirection)} - ${selectedWeather.windDirection} deg`} />
+              <Metric icon={<Waves size={20} />} label="Houle" value={`${selectedWeather.waveHeight} m`} detail={`${selectedWeather.wavePeriod} s - ${formatDirection(selectedWeather.waveDirection)}`} />
               <Metric icon={<Compass size={20} />} label="Visibilite" value={`${selectedWeather.visibility} km`} detail={getVisibilityLabel(selectedWeather.visibility)} />
-              <Metric icon={<Navigation size={20} />} label="Courant" value={`${selectedWeather.currentVelocity} nd`} detail={`Vers ${selectedWeather.currentDirection} deg`} />
+              <Metric icon={<Navigation size={20} />} label="Courant" value={`${selectedWeather.currentVelocity} nd`} detail={`Vers ${formatDirection(selectedWeather.currentDirection)}`} />
               <Metric icon={<Thermometer size={20} />} label="Temperature mer" value={`${selectedWeather.seaSurfaceTemperature} degC`} detail="Surface" />
+              <Metric icon={<Waves size={20} />} label="Niveau de mer" value={`${selectedWeather.seaLevelHeight} m`} detail="MSL modele" />
               <Metric icon={<MapPin size={20} />} label="Coordonnees" value={selectedWeather.latitude.toFixed(2)} detail={selectedWeather.longitude.toFixed(2)} />
             </div>
+
+            <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              Les courants et niveaux de mer sont issus de modeles numeriques a maille large. En zone cotiere, notamment autour des ports et estuaires de Normandie, ces donnees aident a anticiper mais ne remplacent pas les documents nautiques officiels.
+            </p>
           </section>
 
           <section className="overflow-hidden rounded-md border border-cyan-900/10 bg-white shadow-soft">
@@ -197,13 +234,19 @@ function LocationSelector({
   error,
   onPreset,
   onGeolocation,
-  onCustomLocation
+  onCustomLocation,
+  onLocationSearch,
+  searchResults,
+  isSearching
 }: {
   isLoading: boolean;
   error: string | null;
   onPreset: (location: MarineLocation) => void;
   onGeolocation: () => void;
   onCustomLocation: (event: FormEvent<HTMLFormElement>) => void;
+  onLocationSearch: (event: FormEvent<HTMLFormElement>) => void;
+  searchResults: MarineLocation[];
+  isSearching: boolean;
 }) {
   return (
     <div className="rounded-md border border-cyan-900/10 bg-foam p-4">
@@ -219,6 +262,33 @@ function LocationSelector({
           Ma position
         </button>
       </div>
+
+      <form onSubmit={onLocationSearch} className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <label className="sr-only" htmlFor="zone-search">
+          Rechercher un port ou une ville
+        </label>
+        <input id="zone-search" name="query" className="rounded-md border border-cyan-900/15 px-3 py-2 text-sm" placeholder="Rechercher un port : Ouistreham, Cherbourg, Deauville..." />
+        <button type="submit" disabled={isSearching || isLoading} className="inline-flex items-center justify-center gap-2 rounded-md bg-lagoon px-4 py-2 text-sm font-semibold text-white hover:bg-harbor disabled:opacity-60">
+          <Search size={16} aria-hidden="true" />
+          {isSearching ? "Recherche" : "Chercher"}
+        </button>
+      </form>
+
+      {searchResults.length > 0 ? (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {searchResults.map((location) => (
+            <button
+              key={`${location.label}-${location.latitude}-${location.longitude}`}
+              type="button"
+              onClick={() => onPreset(location)}
+              disabled={isLoading}
+              className="rounded-md border border-cyan-900/15 bg-white px-3 py-2 text-sm font-semibold text-harbor hover:bg-cyan-50 disabled:opacity-60"
+            >
+              {location.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mb-3 flex flex-wrap gap-2">
         {locationPresets.map((location) => (
@@ -280,6 +350,11 @@ function getVisibilityLabel(visibility: number) {
   if (visibility >= 5) return "Correcte";
   if (visibility >= 2) return "Reduite";
   return "Faible";
+}
+
+function formatDirection(degrees: number) {
+  const labels = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+  return labels[Math.round(degrees / 45) % labels.length];
 }
 
 function Metric({

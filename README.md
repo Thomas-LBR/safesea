@@ -44,6 +44,7 @@ La premiere version peut fonctionner avec des donnees de demonstration. Les vari
 
 - tableau de bord mer ;
 - zone de suivi modifiable par port, coordonnees ou geolocalisation ;
+- recherche de port ou ville par nom, par exemple Ouistreham ou Cherbourg ;
 - indice de securite calcule ;
 - carte communautaire Leaflet ;
 - signalements de demonstration et ajout local interactif ;
@@ -60,6 +61,9 @@ SafeSea combine Open-Meteo Forecast et Open-Meteo Marine pour afficher :
 - visibilite ;
 - courant marin et direction du courant ;
 - temperature de surface de la mer.
+- niveau de mer modelise.
+
+Les presets incluent plusieurs zones de Normandie : Ouistreham, Courseulles-sur-Mer, Deauville/Trouville, Le Havre, Cherbourg et Granville.
 
 ## Preuves FOU possibles
 

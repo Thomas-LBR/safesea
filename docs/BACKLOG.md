@@ -6,6 +6,7 @@
 - Sauvegarder les signalements en base.
 - Lire les signalements depuis Supabase.
 - Ameliorer la recherche de zone par nom de port.
+- Ajouter une fiche dediee aux zones normandes avec marees, ports, webcams et liens officiels.
 - Ajouter les commentaires sur un signalement.
 - Ajouter les confirmations communautaires.
 - Ajouter la resolution d'un signalement.

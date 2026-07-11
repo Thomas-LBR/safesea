@@ -11,6 +11,7 @@ export type MarineWeather = {
   currentVelocity: number;
   currentDirection: number;
   seaSurfaceTemperature: number;
+  seaLevelHeight: number;
   updatedAt: string;
   source: "open-meteo" | "partial" | "demo";
 };
@@ -29,6 +30,7 @@ type OpenMeteoMarineResponse = {
     ocean_current_velocity?: number;
     ocean_current_direction?: number;
     sea_surface_temperature?: number;
+    sea_level_height_msl?: number;
   };
 };
 
@@ -47,6 +49,12 @@ export const defaultMarineLocation: MarineLocation = {
 };
 
 export const locationPresets: MarineLocation[] = [
+  { label: "Ouistreham - Baie de Seine", latitude: 49.2919, longitude: -0.2593 },
+  { label: "Courseulles-sur-Mer", latitude: 49.3366, longitude: -0.4562 },
+  { label: "Deauville - Trouville", latitude: 49.365, longitude: 0.075 },
+  { label: "Le Havre - Estuaire", latitude: 49.4938, longitude: 0.1077 },
+  { label: "Cherbourg - Rade", latitude: 49.6469, longitude: -1.6221 },
+  { label: "Granville - Baie du Mont", latitude: 48.8376, longitude: -1.5971 },
   defaultMarineLocation,
   { label: "Brest - Rade", latitude: 48.3904, longitude: -4.4861 },
   { label: "Marseille - Frioul", latitude: 43.2804, longitude: 5.3021 },
@@ -59,7 +67,7 @@ export async function fetchMarineWeather(location: MarineLocation = defaultMarin
   const marineParams = new URLSearchParams({
     latitude: String(location.latitude),
     longitude: String(location.longitude),
-    current: "wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction,sea_surface_temperature",
+    current: "wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction,sea_surface_temperature,sea_level_height_msl",
     velocity_unit: "kn",
     timezone: "auto",
     cell_selection: "sea"
@@ -103,6 +111,7 @@ export async function fetchMarineWeather(location: MarineLocation = defaultMarin
       currentVelocity: round(marineData.current?.ocean_current_velocity, 2),
       currentDirection: round(marineData.current?.ocean_current_direction, 0),
       seaSurfaceTemperature: round(marineData.current?.sea_surface_temperature, 1),
+      seaLevelHeight: round(marineData.current?.sea_level_height_msl, 2),
       updatedAt: new Date().toISOString(),
       source: "open-meteo"
     };
@@ -125,6 +134,7 @@ export function getDemoMarineWeather(location: MarineLocation = defaultMarineLoc
     currentVelocity: 0.7,
     currentDirection: 95,
     seaSurfaceTemperature: 18.4,
+    seaLevelHeight: 0.24,
     updatedAt: new Date().toISOString(),
     source: "demo"
   };
