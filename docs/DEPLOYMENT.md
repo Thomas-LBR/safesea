@@ -27,7 +27,7 @@ git push -u origin main
 1. Importer le depot GitHub dans Vercel.
 2. Framework detecte : Next.js.
 3. Commande build : `npm run build`.
-4. Dossier de sortie : laisser vide.
+4. Dossier de sortie statique : `dist`.
 5. Ajouter les variables d'environnement quand Supabase sera cree.
 
 ## Supabase
@@ -49,4 +49,3 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 npm run lint
 npm run build
 ```
-

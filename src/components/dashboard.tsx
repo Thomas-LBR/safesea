@@ -8,7 +8,7 @@ import { ChecklistPanel } from "@/components/checklist-panel";
 import { MapPanel } from "@/components/map-panel";
 import { ReportForm } from "@/components/report-form";
 import { computeSafetyScore, getSafetyLabel } from "@/lib/safety-score";
-import { locationPresets, type MarineLocation, type MarineWeather } from "@/lib/weather";
+import { fetchMarineWeather, locationPresets, searchMarineLocations, type MarineLocation, type MarineWeather } from "@/lib/weather";
 import { getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
 import type { Report } from "@/types/report";
 
@@ -41,20 +41,8 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     setIsLoadingWeather(true);
     setWeatherError(null);
 
-    const params = new URLSearchParams({
-      latitude: String(location.latitude),
-      longitude: String(location.longitude),
-      label: location.label
-    });
-
     try {
-      const response = await fetch(`/api/marine?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error("Impossible de recuperer les conditions");
-      }
-
-      setSelectedWeather((await response.json()) as MarineWeather);
+      setSelectedWeather(await fetchMarineWeather(location));
     } catch {
       setWeatherError("Conditions indisponibles pour cette zone. Reessaie avec un point plus au large.");
     } finally {
@@ -114,11 +102,10 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     setWeatherError(null);
 
     try {
-      const response = await fetch(`/api/geocode?name=${encodeURIComponent(query)}`);
-      const data = (await response.json()) as { results: MarineLocation[] };
-      setSearchResults(data.results);
+      const results = await searchMarineLocations(query);
+      setSearchResults(results);
 
-      if (data.results.length === 0) {
+      if (results.length === 0) {
         setWeatherError("Aucun lieu trouve. Essaie avec un port proche ou des coordonnees.");
       }
     } catch {

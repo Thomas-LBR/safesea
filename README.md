@@ -65,6 +65,8 @@ SafeSea combine Open-Meteo Forecast et Open-Meteo Marine pour afficher :
 
 Les presets incluent plusieurs zones de Normandie : Ouistreham, Courseulles-sur-Mer, Deauville/Trouville, Le Havre, Cherbourg et Granville.
 
+Pour la version publique statique, les appels aux APIs Open-Meteo sont effectues directement depuis le navigateur.
+
 ## Preuves FOU possibles
 
 - application deployee ;

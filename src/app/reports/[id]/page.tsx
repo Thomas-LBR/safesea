@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle2, MapPin, MessageSquare, ShieldAlert } from "lucide-react";
-import { getDemoReport, getStatusLabel, getTypeLabel } from "@/services/reports";
+import { getDemoReport, getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
 
 type ReportDetailPageProps = {
   params: Promise<{
@@ -60,6 +60,12 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
   );
 }
 
+export function generateStaticParams() {
+  return listDemoReports().map((report) => ({
+    id: report.id
+  }));
+}
+
 function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-md border border-cyan-900/10 bg-foam p-4">
@@ -69,4 +75,3 @@ function Info({ icon, label, value }: { icon: React.ReactNode; label: string; va
     </div>
   );
 }
-

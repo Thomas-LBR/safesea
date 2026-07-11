@@ -83,12 +83,8 @@ export async function fetchMarineWeather(location: MarineLocation = defaultMarin
 
   try {
     const [marineResponse, forecastResponse] = await Promise.all([
-      fetch(`https://marine-api.open-meteo.com/v1/marine?${marineParams.toString()}`, {
-        next: { revalidate: 900 }
-      }),
-      fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`, {
-        next: { revalidate: 900 }
-      })
+      fetch(`https://marine-api.open-meteo.com/v1/marine?${marineParams.toString()}`),
+      fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`)
     ]);
 
     if (!marineResponse.ok || !forecastResponse.ok) {
@@ -118,6 +114,42 @@ export async function fetchMarineWeather(location: MarineLocation = defaultMarin
   } catch {
     return getDemoMarineWeather(location);
   }
+}
+
+type OpenMeteoGeocodingResponse = {
+  results?: Array<{
+    name: string;
+    latitude: number;
+    longitude: number;
+    country?: string;
+    admin1?: string;
+    admin2?: string;
+  }>;
+};
+
+export async function searchMarineLocations(query: string): Promise<MarineLocation[]> {
+  const params = new URLSearchParams({
+    name: query,
+    count: "6",
+    language: "fr",
+    format: "json"
+  });
+
+  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`);
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = (await response.json()) as OpenMeteoGeocodingResponse;
+
+  return (
+    data.results?.map((result) => ({
+      label: [result.name, result.admin2, result.admin1, result.country].filter(Boolean).join(" - "),
+      latitude: result.latitude,
+      longitude: result.longitude
+    })) ?? []
+  );
 }
 
 export function getDemoMarineWeather(location: MarineLocation = defaultMarineLocation): MarineWeather {
