@@ -1,6 +1,6 @@
 "use client";
 
-import { Anchor, Bell, CheckCircle2, Compass, LocateFixed, MapPin, Navigation, Search, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
+import { Anchor, Bell, CheckCircle2, Compass, Filter, LocateFixed, MapPin, Navigation, Search, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
 import Link from "next/link";
 import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -9,8 +9,8 @@ import { MapPanel } from "@/components/map-panel";
 import { ReportForm } from "@/components/report-form";
 import { computeSafetyScore, getSafetyLabel } from "@/lib/safety-score";
 import { fetchMarineWeather, locationPresets, searchMarineLocations, type MarineLocation, type MarineWeather } from "@/lib/weather";
-import { getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
-import type { Report } from "@/types/report";
+import { getSeverityLabel, getStatusLabel, getTypeLabel, listDemoReports } from "@/services/reports";
+import type { Report, ReportStatus, ReportType } from "@/types/report";
 
 const reportStyles = {
   danger: "bg-red-50 text-red-700 border-red-200",
@@ -21,20 +21,42 @@ const reportStyles = {
   other: "bg-slate-50 text-slate-700 border-slate-200"
 };
 
+const filterOptions: Array<{ value: ReportType | "all"; label: string }> = [
+  { value: "all", label: "Tous" },
+  { value: "danger", label: "Dangers" },
+  { value: "pollution", label: "Pollution" },
+  { value: "obstacle", label: "Obstacles" },
+  { value: "beacon", label: "Balisage" }
+];
+
 export function Dashboard({ weather }: { weather: MarineWeather }) {
   const [reports, setReports] = useState<Report[]>(listDemoReports());
+  const [reportFilter, setReportFilter] = useState<ReportType | "all">("all");
   const [selectedWeather, setSelectedWeather] = useState(weather);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<MarineLocation[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const activeReports = useMemo(() => reports.filter((report) => report.status !== "resolved"), [reports]);
+  const visibleReports = useMemo(
+    () => activeReports.filter((report) => reportFilter === "all" || report.type === reportFilter),
+    [activeReports, reportFilter]
+  );
+  const currentLocation = useMemo(
+    () => ({
+      label: selectedWeather.label,
+      latitude: selectedWeather.latitude,
+      longitude: selectedWeather.longitude
+    }),
+    [selectedWeather.label, selectedWeather.latitude, selectedWeather.longitude]
+  );
   const safetyScore = computeSafetyScore({
     windKnots: selectedWeather.windSpeed,
     waveMeters: selectedWeather.waveHeight,
     visibilityKm: selectedWeather.visibility,
     currentKnots: selectedWeather.currentVelocity,
-    nearbyActiveReports: activeReports.length
+    nearbyActiveReports: activeReports.length,
+    highSeverityReports: activeReports.filter((report) => report.severity === "high").length
   });
 
   async function updateLocation(location: MarineLocation) {
@@ -115,6 +137,25 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     }
   }
 
+  function updateReportStatus(id: string, status: ReportStatus) {
+    setReports((currentReports) =>
+      currentReports.map((report) =>
+        report.id === id
+          ? {
+              ...report,
+              status,
+              confirmations: status === "confirmed" ? Math.max(report.confirmations + 1, 1) : report.confirmations
+            }
+          : report
+      )
+    );
+  }
+
+  function handleCreateReport(report: Report) {
+    setReports((currentReports) => [report, ...currentReports]);
+    setReportFilter("all");
+  }
+
   return (
     <main className="min-h-screen bg-foam">
       <header className="border-b border-cyan-900/10 bg-white/90">
@@ -191,13 +232,20 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
                 <MapPin size={20} aria-hidden="true" />
               </button>
             </div>
-            <MapPanel reports={reports} />
+            <MapPanel reports={visibleReports} center={[selectedWeather.latitude, selectedWeather.longitude]} />
           </section>
         </div>
 
         <aside className="grid gap-6">
-          <ReportForm onCreate={(report) => setReports((current) => [report, ...current])} />
-          <AlertsPanel reports={activeReports} />
+          <ReportForm currentLocation={currentLocation} onCreate={handleCreateReport} />
+          <AlertsPanel
+            reports={visibleReports}
+            activeCount={activeReports.length}
+            filter={reportFilter}
+            onFilterChange={setReportFilter}
+            onConfirm={(id) => updateReportStatus(id, "confirmed")}
+            onResolve={(id) => updateReportStatus(id, "resolved")}
+          />
           <ChecklistPanel />
           <section className="rounded-md border border-cyan-900/10 bg-harbor p-5 text-white shadow-soft">
             <div className="flex items-start gap-3">
@@ -304,32 +352,104 @@ function LocationSelector({
   );
 }
 
-function AlertsPanel({ reports }: { reports: Report[] }) {
+function AlertsPanel({
+  reports,
+  activeCount,
+  filter,
+  onFilterChange,
+  onConfirm,
+  onResolve
+}: {
+  reports: Report[];
+  activeCount: number;
+  filter: ReportType | "all";
+  onFilterChange: (filter: ReportType | "all") => void;
+  onConfirm: (id: string) => void;
+  onResolve: (id: string) => void;
+}) {
   return (
     <section className="rounded-md border border-cyan-900/10 bg-white p-5 shadow-soft">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-harbor">Alertes actives</h2>
-        <Bell size={20} className="text-lagoon" aria-hidden="true" />
+        <div>
+          <h2 className="text-lg font-bold text-harbor">Alertes actives</h2>
+          <p className="text-sm text-slate-600">{activeCount} signalement{activeCount > 1 ? "s" : ""} en cours</p>
+        </div>
+        <div className="flex items-center gap-2 text-lagoon">
+          <Filter size={18} aria-hidden="true" />
+          <Bell size={20} aria-hidden="true" />
+        </div>
       </div>
-      <div className="grid gap-3">
-        {reports.map((report) => (
-          <article key={report.id} className={`rounded-md border p-4 ${reportStyles[report.type]}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase">{getTypeLabel(report.type)}</p>
-                <h3 className="mt-1 font-bold">{report.title}</h3>
-                <p className="mt-1 text-sm opacity-80">{report.description}</p>
-                <Link href={`/reports/${report.id}`} className="mt-3 inline-flex text-sm font-bold underline underline-offset-4">
-                  Voir le detail
-                </Link>
-              </div>
-              <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold">{getStatusLabel(report.status)}</span>
-            </div>
-          </article>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {filterOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onFilterChange(option.value)}
+            className={`rounded-md border px-3 py-2 text-xs font-bold transition ${
+              filter === option.value
+                ? "border-lagoon bg-lagoon text-white"
+                : "border-cyan-900/15 bg-white text-harbor hover:bg-cyan-50"
+            }`}
+          >
+            {option.label}
+          </button>
         ))}
+      </div>
+
+      <div className="grid gap-3">
+        {reports.length === 0 ? (
+          <p className="rounded-md border border-cyan-900/10 bg-foam px-3 py-4 text-sm font-semibold text-harbor">
+            Aucun signalement actif pour ce filtre.
+          </p>
+        ) : (
+          reports.map((report) => (
+            <article key={report.id} className={`rounded-md border p-4 ${reportStyles[report.type]}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase">
+                    {getTypeLabel(report.type)} - {getSeverityLabel(report.severity)}
+                  </p>
+                  <h3 className="mt-1 font-bold">{report.title}</h3>
+                  <p className="mt-1 text-sm opacity-80">{report.description || "Aucune precision ajoutee."}</p>
+                  <p className="mt-2 text-xs font-semibold opacity-80">
+                    {report.confirmations} confirmation{report.confirmations > 1 ? "s" : ""} - {report.latitude.toFixed(3)}, {report.longitude.toFixed(3)}
+                  </p>
+                  {isDemoReport(report.id) ? (
+                    <Link href={`/reports/${report.id}`} className="mt-3 inline-flex text-sm font-bold underline underline-offset-4">
+                      Voir le detail
+                    </Link>
+                  ) : null}
+                </div>
+                <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold">{getStatusLabel(report.status)}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onConfirm(report.id)}
+                  disabled={report.status === "confirmed"}
+                  className="rounded-md bg-white/80 px-3 py-2 text-xs font-bold transition hover:bg-white disabled:opacity-60"
+                >
+                  Confirmer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onResolve(report.id)}
+                  className="rounded-md bg-white/80 px-3 py-2 text-xs font-bold transition hover:bg-white"
+                >
+                  Resoudre
+                </button>
+              </div>
+            </article>
+          ))
+        )}
       </div>
     </section>
   );
+}
+
+function isDemoReport(id: string) {
+  return ["1", "2", "3"].includes(id);
 }
 
 function getVisibilityLabel(visibility: number) {

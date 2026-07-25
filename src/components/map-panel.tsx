@@ -12,6 +12,6 @@ const CommunityMap = dynamic(() => import("@/components/community-map").then((mo
   )
 });
 
-export function MapPanel({ reports }: { reports: Report[] }) {
-  return <CommunityMap reports={reports} />;
+export function MapPanel({ reports, center }: { reports: Report[]; center: [number, number] }) {
+  return <CommunityMap reports={reports} center={center} />;
 }

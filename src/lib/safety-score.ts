@@ -4,6 +4,7 @@ export type MarineConditions = {
   visibilityKm: number;
   currentKnots: number;
   nearbyActiveReports: number;
+  highSeverityReports?: number;
 };
 
 export function computeSafetyScore(conditions: MarineConditions) {
@@ -24,6 +25,7 @@ export function computeSafetyScore(conditions: MarineConditions) {
   else if (conditions.currentKnots > 1.5) score -= 10;
 
   score -= Math.min(conditions.nearbyActiveReports * 5, 25);
+  score -= Math.min((conditions.highSeverityReports ?? 0) * 8, 24);
 
   return Math.max(0, Math.min(100, score));
 }

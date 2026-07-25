@@ -1,8 +1,9 @@
 import { demoReports } from "@/data/demo-reports";
-import type { Report, ReportStatus, ReportType } from "@/types/report";
+import type { Report, ReportSeverity, ReportStatus, ReportType } from "@/types/report";
 
 export type CreateReportInput = {
   type: ReportType;
+  severity: ReportSeverity;
   title: string;
   description?: string;
   latitude: number;
@@ -22,10 +23,12 @@ export function createLocalReport(input: CreateReportInput): Report {
     id: crypto.randomUUID(),
     type: input.type,
     status: "active",
+    severity: input.severity,
     title: input.title,
     description: input.description,
     latitude: input.latitude,
     longitude: input.longitude,
+    confirmations: 0,
     createdAt: new Date().toISOString()
   };
 }
@@ -34,6 +37,12 @@ export function getStatusLabel(status: ReportStatus) {
   if (status === "active") return "Actif";
   if (status === "confirmed") return "Confirme";
   return "Resolue";
+}
+
+export function getSeverityLabel(severity: ReportSeverity) {
+  if (severity === "high") return "Urgent";
+  if (severity === "medium") return "A surveiller";
+  return "Information";
 }
 
 export function getTypeLabel(type: ReportType) {
@@ -48,4 +57,3 @@ export function getTypeLabel(type: ReportType) {
 
   return labels[type];
 }
-
