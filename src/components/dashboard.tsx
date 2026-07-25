@@ -2,8 +2,8 @@
 
 import { Anchor, Bell, CheckCircle2, Compass, Filter, LocateFixed, MapPin, Navigation, Search, ShieldAlert, Thermometer, Waves, Wind } from "lucide-react";
 import Link from "next/link";
-import type { FormEvent, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChecklistPanel } from "@/components/checklist-panel";
 import { MapPanel } from "@/components/map-panel";
 import { ReportForm } from "@/components/report-form";
@@ -35,6 +35,7 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
   const [selectedWeather, setSelectedWeather] = useState(weather);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [locationQuery, setLocationQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MarineLocation[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const activeReports = useMemo(() => reports.filter((report) => report.status !== "resolved"), [reports]);
@@ -59,9 +60,61 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     highSeverityReports: activeReports.filter((report) => report.severity === "high").length
   });
 
+  useEffect(() => {
+    const query = locationQuery.trim();
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const localMatches = locationPresets.filter((location) => normalize(location.label).includes(normalize(query)));
+    setSearchResults(localMatches);
+    setIsSearching(true);
+    setWeatherError(null);
+
+    let isCurrentSearch = true;
+    const timeoutId = window.setTimeout(() => {
+      void searchMarineLocations(query)
+        .then((results) => {
+          if (!isCurrentSearch) {
+            return;
+          }
+
+          setSearchResults(mergeLocations(localMatches, results));
+
+          if (localMatches.length === 0 && results.length === 0) {
+            setWeatherError("Aucun lieu trouve. Essaie avec un port proche ou des coordonnees.");
+          }
+        })
+        .catch(() => {
+          if (!isCurrentSearch) {
+            return;
+          }
+
+          setWeatherError("Recherche de lieu indisponible pour le moment.");
+        })
+        .finally(() => {
+          if (!isCurrentSearch) {
+            return;
+          }
+
+          setIsSearching(false);
+        });
+    }, 300);
+
+    return () => {
+      isCurrentSearch = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [locationQuery]);
+
   async function updateLocation(location: MarineLocation) {
     setIsLoadingWeather(true);
     setWeatherError(null);
+    setLocationQuery("");
+    setSearchResults([]);
 
     try {
       setSelectedWeather(await fetchMarineWeather(location));
@@ -111,30 +164,16 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
     );
   }
 
-  async function handleLocationSearch(event: FormEvent<HTMLFormElement>) {
+  function handleLocationSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const query = String(form.get("query") || "").trim();
 
-    if (!query) {
-      return;
+    if (searchResults.length > 0) {
+      void updateLocation(searchResults[0]);
     }
+  }
 
-    setIsSearching(true);
-    setWeatherError(null);
-
-    try {
-      const results = await searchMarineLocations(query);
-      setSearchResults(results);
-
-      if (results.length === 0) {
-        setWeatherError("Aucun lieu trouve. Essaie avec un port proche ou des coordonnees.");
-      }
-    } catch {
-      setWeatherError("Recherche de lieu indisponible pour le moment.");
-    } finally {
-      setIsSearching(false);
-    }
+  function handleLocationQueryChange(event: ChangeEvent<HTMLInputElement>) {
+    setLocationQuery(event.currentTarget.value);
   }
 
   function updateReportStatus(id: string, status: ReportStatus) {
@@ -202,6 +241,8 @@ export function Dashboard({ weather }: { weather: MarineWeather }) {
               onPreset={updateLocation}
               onGeolocation={handleGeolocation}
               onCustomLocation={handleCustomLocation}
+              query={locationQuery}
+              onQueryChange={handleLocationQueryChange}
               onLocationSearch={handleLocationSearch}
               searchResults={searchResults}
               isSearching={isSearching}
@@ -270,6 +311,8 @@ function LocationSelector({
   onPreset,
   onGeolocation,
   onCustomLocation,
+  query,
+  onQueryChange,
   onLocationSearch,
   searchResults,
   isSearching
@@ -279,6 +322,8 @@ function LocationSelector({
   onPreset: (location: MarineLocation) => void;
   onGeolocation: () => void;
   onCustomLocation: (event: FormEvent<HTMLFormElement>) => void;
+  query: string;
+  onQueryChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onLocationSearch: (event: FormEvent<HTMLFormElement>) => void;
   searchResults: MarineLocation[];
   isSearching: boolean;
@@ -298,28 +343,42 @@ function LocationSelector({
         </button>
       </div>
 
-      <form onSubmit={onLocationSearch} className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+      <form onSubmit={onLocationSearch} className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
         <label className="sr-only" htmlFor="zone-search">
           Rechercher un port ou une ville
         </label>
-        <input id="zone-search" name="query" className="rounded-md border border-cyan-900/15 px-3 py-2 text-sm" placeholder="Rechercher un port : Ouistreham, Cherbourg, Deauville..." />
+        <div className="relative min-w-0">
+          <input
+            id="zone-search"
+            name="query"
+            value={query}
+            onChange={onQueryChange}
+            autoComplete="off"
+            className="w-full rounded-md border border-cyan-900/15 px-3 py-2 pr-9 text-sm"
+            placeholder="Tape un port : Ouistreham, Cherbourg..."
+          />
+          {isSearching ? <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-lagoon" aria-hidden="true" /> : null}
+        </div>
         <button type="submit" disabled={isSearching || isLoading} className="inline-flex items-center justify-center gap-2 rounded-md bg-lagoon px-4 py-2 text-sm font-semibold text-white hover:bg-harbor disabled:opacity-60">
           <Search size={16} aria-hidden="true" />
-          {isSearching ? "Recherche" : "Chercher"}
+          Choisir
         </button>
       </form>
 
       {searchResults.length > 0 ? (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 grid max-h-56 gap-2 overflow-y-auto rounded-md border border-cyan-900/10 bg-white p-2">
           {searchResults.map((location) => (
             <button
               key={`${location.label}-${location.latitude}-${location.longitude}`}
               type="button"
               onClick={() => onPreset(location)}
               disabled={isLoading}
-              className="rounded-md border border-cyan-900/15 bg-white px-3 py-2 text-sm font-semibold text-harbor hover:bg-cyan-50 disabled:opacity-60"
+              className="grid rounded-md border border-cyan-900/10 px-3 py-2 text-left text-sm font-semibold text-harbor hover:bg-cyan-50 disabled:opacity-60"
             >
-              {location.label}
+              <span>{location.label}</span>
+              <span className="text-xs font-medium text-slate-500">
+                {location.latitude.toFixed(3)}, {location.longitude.toFixed(3)}
+              </span>
             </button>
           ))}
         </div>
@@ -450,6 +509,29 @@ function AlertsPanel({
 
 function isDemoReport(id: string) {
   return ["1", "2", "3"].includes(id);
+}
+
+function mergeLocations(primaryLocations: MarineLocation[], secondaryLocations: MarineLocation[]) {
+  const locations = [...primaryLocations, ...secondaryLocations];
+  const seen = new Set<string>();
+
+  return locations.filter((location) => {
+    const key = `${normalize(location.label)}-${location.latitude.toFixed(3)}-${location.longitude.toFixed(3)}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function getVisibilityLabel(visibility: number) {
